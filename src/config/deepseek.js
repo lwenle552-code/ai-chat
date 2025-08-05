@@ -2,7 +2,7 @@
 // API配置
 export const API_CONFIG = {
     baseURL: "https://api.deepseek.com",
-    apiKey: "1112211", // 换成自己的apiKey
+    apiKey: "sk-1111", // 换成自己的apiKey
     dangerouslyAllowBrowser: true
 };
 
@@ -16,5 +16,6 @@ export const MODEL_CONFIG = {
 // 本地存储键名配置
 export const STORAGE_KEYS = {
     sessionList: "list",
-    activeIndex: "index"
+    activeIndex: "index",
+    selectedModel: "selectedModel" // 缓存选中的模型
 };

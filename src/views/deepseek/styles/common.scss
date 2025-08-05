@@ -100,6 +100,40 @@
             border: 1px solid rgba(254, 44, 85, 0.3);
           }
 
+          &.session-item-preset {
+            background: rgba(254, 44, 85, 0.15);
+            border: 1px solid rgba(254, 44, 85, 0.2);
+            
+            &:hover {
+              background: rgba(254, 44, 85, 0.25);
+            }
+            
+            &.session-item-active {
+              background: rgba(254, 44, 85, 0.3);
+              border: 1px solid rgba(254, 44, 85, 0.4);
+            }
+          }
+
+          .session-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+            min-width: 0;
+            
+            .preset-icon {
+              font-size: 14px;
+              flex-shrink: 0;
+              animation: twinkle 2s infinite;
+            }
+            
+            span {
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+          }
+
           .normal-node {
             color: rgba(255, 255, 255, 0.8);
           }
@@ -160,10 +194,20 @@
       .input-area {
         height: 36px;
         display: grid;
-        grid-template-columns: auto 120px 80px;
+        grid-template-columns: 1fr auto;
         grid-gap: 10px;
         box-sizing: border-box;
         padding: 0 8px 8px 0;
+        
+        .button-group {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          
+          .model-select {
+            width: 120px;
+          }
+        }
       }
     }
   }
@@ -221,5 +265,17 @@
     &::placeholder {
       color: rgba(255, 255, 255, 0.5);
     }
+  }
+}
+
+// 星标闪烁动画
+@keyframes twinkle {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
   }
 }
