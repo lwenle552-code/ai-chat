@@ -2,7 +2,8 @@
   <div ref="chatContainer" class="virtual-chat-container" @scroll="handleScroll">
     <div class="virtual-chat-content" :style="{ paddingTop: `${aboveHeight}px`, paddingBottom: `${belowHeight}px` }">
       <ChatMessage v-for="(message, index) in visibleMessages" :key="message.id || index" :message="message"
-        :index="startIndex + index" :ref="(el) => { if (el) messageRefs[startIndex + index] = el; }" />
+        :index="startIndex + index" :ref="(el) => { if (el) messageRefs[startIndex + index] = el; }"
+        :is-last-loading="props.loading && (startIndex + index === props.messages.length - 1)" />
     </div>
     <div class="scroll-to-bottom" v-show="showScrollButton" @click="scrollToBottom">
       <i class="scroll-icon">↓</i>
@@ -19,6 +20,10 @@ const props = defineProps({
   messages: {
     type: Array,
     required: true
+  },
+  loading: {
+    type: Boolean,
+    default: false
   },
   // 预估的单个消息高度，用于初步计算
   estimatedItemHeight: {

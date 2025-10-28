@@ -58,12 +58,8 @@
             <span v-else>免费</span>
           </div>
           <div class="input-area" :class="isMobile ? 'left-space' : ''">
-            <el-input v-model="queryKeys" id="keyInput" placeholder="请输入内容" show-word-limit @keydown.enter="
-              (e) => {
-                if (e.isComposing || loading) return; // 忽略中文输入法合成和加载状态
-                handleRequest(); // 调用消息发送函数
-              }
-            " />
+            <el-input v-model="queryKeys" id="keyInput" placeholder="请输入内容" show-word-limit
+              @keydown.enter="handleRequest" />
             <div class="button-group">
               <el-select v-model="queryInfos.model" class="model-select" @change="handleModelChange"
                 :disabled="queryInfos.messages.length > 0" :title="queryInfos.messages.length > 0
@@ -124,11 +120,11 @@ const sessionList = ref([]); // 会话列表
 const activeIndex = ref(-1); // 当前激活会话的索引
 const editIndex = ref(-1); // 正在重命名的会话索引
 const totalAmt = ref(0); // DeepSeek 账户余额
-const queryKeys = ref(""); // 用户输入的内容
+const queryKeys = ref(''); // 用户输入的内容
 const openai = ref(null); // OpenAI 客户端实例
 const loading = ref(false); // API 请求加载状态
 const diagnosing = ref(false); // API 诊断状态
-const virtualChatRef = ref(null); // 消息组件的引用
+const virtualChatRef = ref(null); // 用于引用 VirtualChat 组件
 
 // 存储当前会话信息和模型配置
 const queryInfos = ref({
@@ -642,7 +638,7 @@ const handleRequest = async () => {
       }
     }
 
-    messageRef.value.scrollBottom();
+    virtualChatRef.value.scrollToBottom();
     // 更新会话列表中的消息
     sessionList.value[activeIndex.value].messages = queryInfos.value.messages;
     loading.value = false;

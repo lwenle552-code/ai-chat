@@ -19,12 +19,27 @@
       <div class="message-content">
         <div class="message-text">
           <div v-if="message.content" v-html="renderMarkdown(message.content)" class="markdown-content"></div>
-          <div v-else>思考中...</div>
+          <div v-else>
+            <template v-if="isLastLoading">
+              <div class="loading-dots">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+              </div>
+            </template>
+            <template v-else>思考中...</template>
+          </div>
         </div>
         <div class="export-actions" v-if="!isUser && hasCodeContent && !isPresetMessage">
+          <el-button type="primary" size="small" :icon="View" @click="togglePreview" title="预览代码">
+            预览代码
+          </el-button>
           <el-button type="primary" size="small" :icon="Download" @click="handleExportCode" title="导出代码">
             导出代码
           </el-button>
+        </div>
+        <div v-if="showPreview" class="code-preview-container">
+          <iframe ref="previewFrame" class="code-preview-iframe" sandbox="allow-scripts allow-same-origin"></iframe>
         </div>
         <div class="message-time">{{ formatTime(message.timestamp) }}</div>
       </div>
@@ -33,11 +48,11 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, nextTick } from 'vue';
 import MarkdownIt from 'markdown-it';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github.css'; // 或者你喜欢的其他主题
-import { Download } from '@element-plus/icons-vue';
+import { Download, View } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import userAvatar from '../views/deepseek/images/user.png';
 import aiAvatar from '../views/deepseek/images/ai.png';
@@ -49,16 +64,18 @@ const md = new MarkdownIt({
   highlight: function (str, lang) {
     if (lang && hljs.getLanguage(lang)) {
       try {
-        return '<pre><code class="hljs">' +
+        return '<pre class="hljs"><code>' +
           hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
           '</code></pre>';
       } catch (__) { }
     }
-
-    return '<pre><code class="hljs">' + md.utils.escapeHtml(str) + '</code></pre>';
+    return '<pre class="hljs"><code>' + md.utils.escapeHtml(str) + '</code></pre>';
   }
 });
 
+
+const showPreview = ref(false);
+const previewFrame = ref(null);
 
 const renderMarkdown = (content) => {
   return md.render(content);
@@ -72,6 +89,10 @@ const props = defineProps({
   index: {
     type: Number,
     required: true
+  },
+  isLastLoading: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -96,6 +117,51 @@ function formatTime(timestamp) {
   });
 }
 
+// 切换预览
+function togglePreview() {
+  showPreview.value = !showPreview.value;
+  if (showPreview.value) {
+    nextTick(() => {
+      renderPreview();
+    });
+  }
+}
+
+// 渲染预览
+function renderPreview() {
+  if (!previewFrame.value || !props.message.content) return;
+
+  const codeBlocks = extractCodeBlocks(props.message.content);
+  let htmlContent = '';
+  let cssContent = '';
+
+  codeBlocks.forEach(block => {
+    if (block.language === 'html') {
+      htmlContent += block.content;
+    } else if (block.language === 'css') {
+      cssContent += block.content;
+    }
+  });
+
+  const iframeDoc = previewFrame.value.contentDocument || previewFrame.value.contentWindow.document;
+  iframeDoc.open();
+  iframeDoc.write(`
+    <!DOCTYPE html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>代码预览</title>
+        <style>${cssContent}</style>
+    </head>
+    <body>
+        ${htmlContent}
+    </body>
+    </html>
+  `);
+  iframeDoc.close();
+}
+
 // 提取代码块
 function extractCodeBlocks(content) {
   const codeBlocks = [];
@@ -103,41 +169,56 @@ function extractCodeBlocks(content) {
   let match;
 
   while ((match = codeBlockRegex.exec(content)) !== null) {
+    let language = match[1] ? match[1].toLowerCase() : 'text';
+    const codeContent = match[2].trim();
+
+    // 尝试推断语言，如果未明确指定
+    if (language === 'text' || language === '') {
+      if (codeContent.includes('<') && codeContent.includes('>') && !codeContent.includes('{') && !codeContent.includes('}')) {
+        language = 'html';
+      } else if (codeContent.includes('{') && codeContent.includes('}') && !codeContent.includes('<') && !codeContent.includes('>')) {
+        language = 'css';
+      } else if (codeContent.includes('import ') || codeContent.includes('export ')) {
+        language = 'typescript'; // 默认推断为 TypeScript/JavaScript
+      }
+    }
+
     codeBlocks.push({
-      language: match[1] || 'text',
-      content: match[2].trim()
+      language: language,
+      content: codeContent
     });
   }
 
-  if (codeBlocks.length === 0) {
-    const lines = content.split('\n');
-    const codeLines = [];
-    let inCodeSection = false;
-
-    for (const line of lines) {
-      if (line.includes('import ') || line.includes('export const') || line.includes('export default')) {
-        inCodeSection = true;
-      }
-
-      if (inCodeSection) {
-        codeLines.push(line);
-
-        if (line.trim() === '' && codeLines.length > 5) {
-          const nextLines = lines.slice(lines.indexOf(line) + 1, lines.indexOf(line) + 3);
-          if (nextLines.every(l => !l.includes('export') && !l.includes('import') && !l.trim().startsWith('//'))) {
-            break;
-          }
-        }
-      }
-    }
-
-    if (codeLines.length > 0) {
-      codeBlocks.push({
-        language: 'typescript',
-        content: codeLines.join('\n').trim()
-      });
-    }
-  }
+  // 移除旧的推断逻辑，因为现在在代码块提取时已经处理
+  // if (codeBlocks.length === 0) {
+  //   const lines = content.split('\n');
+  //   const codeLines = [];
+  //   let inCodeSection = false;
+  //
+  //   for (const line of lines) {
+  //     if (line.includes('import ') || line.includes('export const') || line.includes('export default')) {
+  //       inCodeSection = true;
+  //     }
+  //
+  //     if (inCodeSection) {
+  //       codeLines.push(line);
+  //
+  //       if (line.trim() === '' && codeLines.length > 5) {
+  //         const nextLines = lines.slice(lines.indexOf(line) + 1, lines.indexOf(line) + 3);
+  //         if (nextLines.every(l => !l.includes('export') && !l.includes('import') && !l.trim().startsWith('//'))) {
+  //           break;
+  //         }
+  //       }
+  //     }
+  //   }
+  //
+  //   if (codeLines.length > 0) {
+  //     codeBlocks.push({
+  //       language: 'typescript',
+  //       content: codeLines.join('\n').trim()
+  //     });
+  //   }
+  // }
 
   return codeBlocks;
 }
@@ -270,7 +351,7 @@ function handleExportCode() {
 
 .message-text {
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.7;
   white-space: pre-wrap;
   word-break: break-word;
   color: #000;
@@ -323,5 +404,56 @@ function handleExportCode() {
 .export-actions .el-button {
   --el-button-size: 28px;
   --el-button-padding: 8px 12px;
+}
+
+.code-preview-container {
+  margin-top: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  width: 100%;
+  height: 300px;
+  /* 可根据需要调整高度 */
+}
+
+.code-preview-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.loading-dots {
+  display: flex;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.loading-dots .dot {
+  width: 8px;
+  height: 8px;
+  background-color: #666;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.loading-dots .dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.loading-dots .dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes bounce {
+
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+  }
+
+  40% {
+    transform: scale(1);
+  }
 }
 </style>
