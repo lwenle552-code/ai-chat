@@ -1,3 +1,11 @@
+// 路由初始化: 创建并配置 Vue Router 实例
+// 路由模式: 使用 HTML5 History 模式，支持 SEO
+// 滚动控制: 路由切换时自动滚动到页面顶部
+// 导航守卫: 提供了前置守卫和后置钩子的框架
+// 页面标题管理: 根据路由元信息动态设置页面标题
+// 模块化设计: 路由配置独立在 index.js 文件中
+
+
 // 导入router所需的方法
 import { createRouter, createWebHistory } from "vue-router";
 // 导入路由页面的配置

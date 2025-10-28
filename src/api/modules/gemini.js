@@ -1,3 +1,4 @@
+//封装 Google Gemini 模型的 API 请求
 import request from "@/api/request";
 import { API_CONFIG } from "@/config/gemini";
 
