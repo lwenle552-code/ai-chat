@@ -46,17 +46,13 @@
 - 移动端适配
 - 主题样式定制
 
-## 项目结构
-
-src/ ├── api/ # API 接口封装 ├── components/ # 全局组件（虚拟聊天组件等） ├── config/ # 配置文件（API 密钥、模型参数等） ├── router/ # 路由配置 ├── utils/ # 工具函数 ├── views/ # 页面视图 └── App.vue # 根组件
-
 ## 环境要求
 - Node.js >= 16.0.0
 - npm包管理器
 
 ## 安装依赖
 ```bash
- npm run dev
+ npm install
  ```
 
 ## 项目运行
