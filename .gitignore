@@ -23,4 +23,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-echo "stats.html" >> .gitignore
+
+stats.html
